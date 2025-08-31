@@ -57,9 +57,9 @@ import { useQueryClient } from "@tanstack/react-query";
       if (loginSuccess && !isProfileLoading && profile?.data) {
         // console.log("Profile role:", profile.data);
         if (profile.data.role === "OWNER") {
-          router.replace("/(tabs)/owner");
+          router.replace("/(tabs-owner)");
         } else if (profile.data.role === "DRIVER") {
-          router.replace("/(tabs)/driver");
+          router.replace("/(tabs-driver)");
         } else {
           router.replace("/");
         }
