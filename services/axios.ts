@@ -5,7 +5,7 @@ import axios, {
 } from "axios";
 import * as SecureStore from "expo-secure-store";
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://154.19.37.110:8080";
 
 // Token storage keys
 const ACCESS_TOKEN_KEY = "access_token";

@@ -82,7 +82,7 @@ export default function RegisterScreen() {
       Alert.alert("Sukses", "Registrasi berhasil! Silakan login.", [
         {
           text: "OK",
-          onPress: () => router.replace("/login"),
+          onPress: () => router.replace("/"),
         },
       ]);
     } catch (error: any) {
@@ -189,7 +189,7 @@ export default function RegisterScreen() {
           </View>
 
           <View className="items-center">
-            <Link href="/login" asChild>
+            <Link href="/" asChild>
               <TouchableOpacity className="py-3 px-6">
                 <Text className="text-gray-600 text-center text-base">
                   Sudah punya akun?{" "}
