@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "tracking-truck",
+    "name": "Tracking Truck",
     "slug": "tracking-truck",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.jpg",
+    "icon": "./assets/icons/logo.png",
     "scheme": "trackingtruck",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/logo.jpg",
+      "image": "./assets/icons/logo.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#b6d0fa"
     },
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.jpg",
+        "foregroundImage": "./assets/icons/logo.jpg",
         "backgroundColor": "#b6d0fa"
       },
       "edgeToEdgeEnabled": true,
@@ -31,7 +31,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/logo.png"
+      "favicon": "./assets/icons/logo.png"
     },
     "plugins": [
       [
@@ -44,7 +44,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/logo.jpg",
+          "image": "./assets/icons/logo.jpg",
           "imageWidth": 500,
           "resizeMode": "contain",
           "backgroundColor": "#b6d0fa"
