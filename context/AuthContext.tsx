@@ -300,44 +300,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (storedAccessToken && storedRefreshToken) {
           try {
-            // Check if access token is still valid
             const decoded: TokenPayload = jwtDecode(storedAccessToken);
             const currentTime = Date.now() / 1000;
 
             if (decoded.exp > currentTime) {
-              // Token is still valid
               setAccessToken(storedAccessToken);
               setRefreshToken(storedRefreshToken);
-              
               if (storedUser) {
                 try {
                   const parsedUser = JSON.parse(storedUser);
                   setUser(parsedUser);
                 } catch (parseError) {
                   console.warn("Failed to parse stored user:", parseError);
+                  await clearTokens().catch(console.error); // Bersihkan token jika parsing gagal
                 }
               }
             } else {
-              // Token expired, try to refresh
-              try {
-                const newAccessToken = await refreshAccessToken();
-                if (newAccessToken && isMounted) {
-                  const newRefreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY).catch(() => null);
-
-                  setAccessToken(newAccessToken);
-                  setRefreshToken(newRefreshToken);
-                  
-                  if (storedUser) {
-                    try {
-                      const parsedUser = JSON.parse(storedUser);
-                      setUser(parsedUser);
-                    } catch (parseError) {
-                      console.warn("Failed to parse stored user:", parseError);
-                    }
+              const newAccessToken = await refreshAccessToken().catch(
+                () => null
+              );
+              if (newAccessToken && isMounted) {
+                const newRefreshToken = await SecureStore.getItemAsync(
+                  REFRESH_TOKEN_KEY
+                ).catch(() => null);
+                setAccessToken(newAccessToken);
+                setRefreshToken(newRefreshToken);
+                if (storedUser) {
+                  try {
+                    const parsedUser = JSON.parse(storedUser);
+                    setUser(parsedUser);
+                  } catch (parseError) {
+                    console.warn("Failed to parse stored user:", parseError);
+                    await clearTokens().catch(console.error);
                   }
                 }
-              } catch (refreshError) {
-                console.warn("Token refresh failed during init:", refreshError);
+              } else {
                 await clearTokens().catch(console.error);
               }
             }
@@ -348,11 +345,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         console.error("❌ Error initializing auth:", error);
-        try {
-          await clearTokens();
-        } catch (clearError) {
-          console.error("Failed to clear tokens:", clearError);
-        }
+        await clearTokens().catch(console.error);
       } finally {
         if (isMounted) {
           setLoading(false);

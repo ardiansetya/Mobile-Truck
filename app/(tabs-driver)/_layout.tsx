@@ -164,7 +164,7 @@ const TabLayoutDriver = () => {
         },
       }}>
       <Tabs.Screen
-        name="index"
+        name="home-driver"
         options={{
           title: "Home",
           header: () => <CustomHeader />,

@@ -152,6 +152,7 @@ const TabLayoutOwner = () => {
           justifyContent: "center",
           alignItems: "center",
           paddingVertical: 8,
+          height: 60,
         },
         tabBarStyle: {
           backgroundColor: "white",
@@ -172,7 +173,7 @@ const TabLayoutOwner = () => {
         },
       }}>
       <Tabs.Screen
-        name="index"
+        name="home-owner"
         options={{
           title: "Home",
           header: () => <CustomHeader />,
