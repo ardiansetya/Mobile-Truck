@@ -46,8 +46,8 @@ export default function LoginScreen() {
       await handleLogin(data);
       await queryClient.invalidateQueries({ queryKey: ["user_profile"] });
       setLoginSuccess(true); // Mark login as successful
-    } catch (error) {
-      ("Login error handled by hook:", error.response.data.errors);
+    } catch (error: any) {
+      console.log("Login error handled by hook:", error.response.data.errors);
     }
   };
 
