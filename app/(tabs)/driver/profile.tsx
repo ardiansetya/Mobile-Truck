@@ -1,18 +1,18 @@
+import { useLogout } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
 import React from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
+  ScrollView,
   StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { useProfile } from "@/hooks/useProfile";
-import { useLogout } from "@/hooks/useAuth";
 // import { useAuth } from "@/context/AuthContext"; // Uncomment when auth context is available
 
 const Profile = () => {
@@ -49,10 +49,9 @@ const Profile = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              console.log("🔄 Proses logout...");
               await handleLogout();
-              console.log("✅ Logout pressed");
-              router.replace("/login");
+
+              router.replace("/");
             } catch (error) {
               console.error("❌ Gagal logout:", error);
             }
@@ -71,7 +70,6 @@ const Profile = () => {
       <View style={{ flex: 1, paddingTop: insets.top }} className="bg-gray-50">
         <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
 
-
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#2563EB" />
           <Text className="mt-4 text-gray-600">Memuat profil...</Text>
@@ -84,8 +82,6 @@ const Profile = () => {
     return (
       <View style={{ flex: 1, paddingTop: insets.top }} className="bg-gray-50">
         <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-
-       
 
         <View className="flex-1 justify-center items-center px-6">
           <Ionicons name="alert-circle" size={64} color="#EF4444" />
@@ -111,8 +107,6 @@ const Profile = () => {
       style={{ flex: 1, paddingTop: insets.top, marginBottom: insets.bottom }}
       className="bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-
-     
 
       <ScrollView
         className="flex-1"

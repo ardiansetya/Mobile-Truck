@@ -8,7 +8,6 @@ export const useLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-
   const handleLogin = useCallback(
     async (credentials: LoginRequest) => {
       try {
@@ -21,7 +20,6 @@ export const useLogin = () => {
 
         await login(payload);
       } catch (err: Error | any) {
-        console.log("Login error:", err);
         setError(err || "Login failed");
         throw err.response.data.errors;
       } finally {
@@ -92,8 +90,8 @@ export const useLogout = () => {
     try {
       setIsLoading(true);
       await logout();
-      console.log("✅ Logout pressed");
-      router.replace("/login");
+
+      router.replace("/");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
@@ -106,7 +104,6 @@ export const useLogout = () => {
     isLoading,
   };
 };
-
 
 export const useTokenRefresh = () => {
   const { refreshaccess_token } = useAuth();

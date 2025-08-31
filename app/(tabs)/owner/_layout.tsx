@@ -10,8 +10,6 @@ const TabLayoutOwner = () => {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, isLoading } = useAuthStatus();
 
-  console.log("isAuthenticated:", isAuthenticated);
-
   if (isLoading) {
     return (
       <View className="flex-1 justify-center items-center">

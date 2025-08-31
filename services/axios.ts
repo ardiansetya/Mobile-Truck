@@ -94,8 +94,6 @@ const refreshAccessToken = async (): Promise<string | null> => {
       return null;
     }
 
-    console.log("🔄 Attempting token refresh...");
-
     const refreshApi = axios.create({
       baseURL: BASE_URL,
       headers: {
@@ -113,8 +111,6 @@ const refreshAccessToken = async (): Promise<string | null> => {
     const newrefresh_token =
       response.data?.data?.refresh_token || refresh_token;
 
-    console.log("🔑 Refresh response:", response.data);
-
     // Simpan hanya jika string
     if (access_token && typeof access_token === "string") {
       await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, access_token);
@@ -123,7 +119,6 @@ const refreshAccessToken = async (): Promise<string | null> => {
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, newrefresh_token);
     }
 
-    console.log("✅ Tokens refreshed successfully");
     return access_token;
   } catch (error) {
     console.error("❌ Token refresh failed:", error);
@@ -131,7 +126,6 @@ const refreshAccessToken = async (): Promise<string | null> => {
     return null;
   }
 };
-
 
 // =======================
 // CLEAR TOKENS
@@ -143,11 +137,10 @@ const clearTokens = async (): Promise<void> => {
       SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
       SecureStore.deleteItemAsync("user"),
     ]);
-    console.log("🗑️ Tokens cleared");
   } catch (error) {
     console.error("❌ Error clearing tokens:", error);
   }
 };
 
-export { refreshAccessToken, clearTokens, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY };
+export { ACCESS_TOKEN_KEY, clearTokens, REFRESH_TOKEN_KEY, refreshAccessToken };
 export default api;

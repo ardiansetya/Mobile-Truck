@@ -1,7 +1,7 @@
 // hooks/useProfile.ts
 import { useAuth } from "@/context/AuthContext";
 import api from "@/services/axios";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Types
 interface UserProfile {
@@ -26,7 +26,6 @@ interface UpdateProfileData {
   age?: number;
 }
 
-
 interface UpdateProfile {
   refresh_token: string;
 }
@@ -35,11 +34,10 @@ interface UpdateProfileResponse {
   data: UpdateProfile;
 }
 
-
 // API functions
 const fetchProfile = async (): Promise<ProfileResponse> => {
   const response = await api.get("/api/users/profile");
-  console.log("Profile API response:", response.data); // Debug log
+  // Debug log
 
   if (response.status !== 200) {
     throw new Error("Failed to fetch user profile");
@@ -52,7 +50,6 @@ const updateProfile = async (
   data: UpdateProfileData
 ): Promise<UpdateProfileResponse> => {
   const response = await api.post("/api/users/profile", data);
-  
 
   if (response.status !== 200) {
     throw new Error("Failed to update profile");
@@ -62,12 +59,12 @@ const updateProfile = async (
 };
 
 const validateRole = async () => {
-    const response = await api.get("/auth/validate");
-    if (response.status !== 200) {
-        throw new Error("Failed to validate user role");
-    }
-    return response.data;
-}
+  const response = await api.get("/auth/validate");
+  if (response.status !== 200) {
+    throw new Error("Failed to validate user role");
+  }
+  return response.data;
+};
 
 // Custom hooks
 export const useProfile = () => {
@@ -105,6 +102,4 @@ export const useUpdateProfile = () => {
       console.error("Update profile error:", error);
     },
   });
-
-  
 };

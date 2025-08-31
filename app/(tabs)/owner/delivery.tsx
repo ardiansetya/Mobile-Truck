@@ -1,10 +1,8 @@
-import React from "react";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import DeliveryHistoryCard from "@/components/DeliveryHistoryCard";
+import { useDeliveryHistory } from "@/hooks/useDelivery";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -14,8 +12,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { useDeliveryHistory } from "@/hooks/useDelivery";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const DeliveryHistory = () => {
   const insets = useSafeAreaInsets();
@@ -27,8 +27,6 @@ const DeliveryHistory = () => {
     isRefetching,
   } = useDeliveryHistory();
 
-  console.log(historyData);
-
   const router = useRouter();
 
   const handleRefresh = () => {
@@ -37,7 +35,7 @@ const DeliveryHistory = () => {
 
   const handleDeliveryPress = (deliveryId: string) => {
     // Navigate to delivery detail screen
-    console.log("Navigate to delivery history detail:", deliveryId);
+
     router.push(`/delivery/${deliveryId}`);
   };
 
@@ -46,7 +44,6 @@ const DeliveryHistory = () => {
     return (
       <SafeAreaView className="flex-1 bg-gray-50">
         <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
-
 
         {/* Loading Content */}
         <View className="flex-1 justify-center items-center">
@@ -63,7 +60,6 @@ const DeliveryHistory = () => {
       <SafeAreaView className="flex-1 bg-gray-50">
         <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
 
-     
         {/* Error Content */}
         <View className="flex-1 justify-center items-center px-6">
           <Ionicons name="alert-circle" size={64} color="#EF4444" />
@@ -162,11 +158,11 @@ const DeliveryHistory = () => {
             tintColor="#2563EB"
           />
         }>
-          <View className="flex-row justify-between items-center mb-4">
-                    <Text className="text-xl font-bold text-gray-800">
-                      Riwayat Pengiriman
-                    </Text>
-                  </View>
+        <View className="flex-row justify-between items-center mb-4">
+          <Text className="text-xl font-bold text-gray-800">
+            Riwayat Pengiriman
+          </Text>
+        </View>
         {/* Content */}
         {deliveries.length === 0 ? (
           <View className="bg-white rounded-2xl p-8 items-center shadow-sm">

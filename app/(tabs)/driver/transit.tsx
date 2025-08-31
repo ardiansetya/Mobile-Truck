@@ -1,6 +1,17 @@
-import {  useDeliveryDetailsByWorker, useRoute, useTruck, useWorker } from "@/hooks/useDelivery";
+import {
+  useDeliveryDetailsByWorker,
+  useRoute,
+  useTruck,
+  useWorker,
+} from "@/hooks/useDelivery";
 import { useProfile } from "@/hooks/useProfile";
-import { getCityName, TransitRequest, useCities, useSubmitTransit, useTransitPointDriver } from "@/hooks/useTransit";
+import {
+  getCityName,
+  TransitRequest,
+  useCities,
+  useSubmitTransit,
+  useTransitPointDriver,
+} from "@/hooks/useTransit";
 
 import { Feather, Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
@@ -37,7 +48,7 @@ const TransitDriver = () => {
     isRefetching: deliveriesRefetching,
   } = useDeliveryDetailsByWorker();
 
-  const {data: userData} = useProfile();
+  const { data: userData } = useProfile();
   const worker_id = userData?.data.id;
 
   const {
@@ -46,11 +57,7 @@ const TransitDriver = () => {
     error: transitPointsError,
   } = useTransitPointDriver(worker_id!);
 
-
-  const {
-    data: citiesData,
-    isLoading: citiesLoading,
-  } = useCities();
+  const { data: citiesData, isLoading: citiesLoading } = useCities();
 
   const { mutate: submitTransit, isPending: isSubmitting } = useSubmitTransit();
 
@@ -63,11 +70,11 @@ const TransitDriver = () => {
   const cities = citiesData?.data || [];
   const routeId = deliveriesData?.data.route_id;
   const workerId = deliveriesData?.data.worker_id;
-const truckId = deliveriesData?.data.truck_id;
+  const truckId = deliveriesData?.data.truck_id;
 
   const { data: routeData } = useRoute(routeId!);
   const { data: workerData } = useWorker(workerId!);
-  const {data: truckData} = useTruck(truckId!);
+  const { data: truckData } = useTruck(truckId!);
 
   // Format durasi
   const formatDuration = (minutes: number) => {
@@ -92,7 +99,9 @@ const truckId = deliveriesData?.data.truck_id;
 
   // Submit transit
   const handleSubmitTransit = () => {
-    const delivery_id = useCustomId ? customDeliveryId.trim() : selectedDelivery;
+    const delivery_id = useCustomId
+      ? customDeliveryId.trim()
+      : selectedDelivery;
 
     if (!delivery_id) {
       Alert.alert("Error", "Pilih delivery atau masukkan Delivery ID");
@@ -120,7 +129,6 @@ const truckId = deliveriesData?.data.truck_id;
       delivery_id,
       transit_point_id: selectedTransitPoint,
     };
-    console.log(transitData);
 
     Alert.alert(
       "Konfirmasi Transit",
@@ -235,7 +243,8 @@ const truckId = deliveriesData?.data.truck_id;
                     </View>
                     <Text className="text-gray-500 text-sm mt-1">
                       Rute: {routeData?.data.start_city_name} →{" "}
-                      {routeData?.data.end_city_name} ({routeData?.data.cargo_type})
+                      {routeData?.data.end_city_name} (
+                      {routeData?.data.cargo_type})
                     </Text>
                     <Text className="text-gray-500 text-sm">
                       Driver: {workerData?.data.username}
@@ -323,9 +332,12 @@ const truckId = deliveriesData?.data.truck_id;
                 }`}>
                 <View className="flex-row justify-between">
                   <View className="flex-1">
-                    <Text className="font-semibold text-gray-800 " style={{lineHeight: 20}}>
+                    <Text
+                      className="font-semibold text-gray-800 "
+                      style={{ lineHeight: 20 }}>
                       {getCityName(point.loading_city_id, cities)} →{" "}
-                      {getCityName(point.unloading_city_id, cities)} ({point.cargo_type})
+                      {getCityName(point.unloading_city_id, cities)} (
+                      {point.cargo_type})
                     </Text>
                     <Text className="text-gray-500 text-sm mt-1">
                       ⏱ Estimasi:{" "}

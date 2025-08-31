@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import DeliveryCard from "@/components/DeliveryCard";
+import { useDeliveryByWorker } from "@/hooks/useDelivery";
+import { usePositionTracker } from "@/hooks/usePositionTracker";
+import { useProfile } from "@/hooks/useProfile";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,18 +15,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { useDeliveryByWorker } from "@/hooks/useDelivery";
-import { useProfile } from "@/hooks/useProfile";
-import { usePositionTracker } from "@/hooks/usePositionTracker";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const DashboardDriver = () => {
   const insets = useSafeAreaInsets();
   const { data: user } = useProfile();
   const worker_id = user?.data.id || "";
   const [nextUpdateCountdown, setNextUpdateCountdown] = useState<string>("");
-
-
 
   const {
     data: deliveriesData,
@@ -48,7 +46,7 @@ const DashboardDriver = () => {
     isMocked,
   } = usePositionTracker({
     autoTrack: true, // Auto-start when component mounts
-    interval: 900000, 
+    interval: 900000,
   });
 
   const router = useRouter();
@@ -68,7 +66,6 @@ const DashboardDriver = () => {
 
       if (timeLeft <= 0) {
         setNextUpdateCountdown("Sending soon...");
-
       } else {
         const minutes = Math.floor(timeLeft / 60000);
         const seconds = Math.floor((timeLeft % 60000) / 1000);
@@ -103,19 +100,17 @@ const DashboardDriver = () => {
     refetch();
   };
 
-    useEffect(() => {
-      if (isMocked) {
-        Alert.alert(
-          "🚨 Fake GPS Terdeteksi",
-          "Lokasi kamu terdeteksi menggunakan aplikasi Fake GPS. Matikan aplikasi tersebut untuk melanjutkan.",
-          [{ text: "OK" }]
-        );
-      }
-    }, [isMocked]);
-
+  useEffect(() => {
+    if (isMocked) {
+      Alert.alert(
+        "🚨 Fake GPS Terdeteksi",
+        "Lokasi kamu terdeteksi menggunakan aplikasi Fake GPS. Matikan aplikasi tersebut untuk melanjutkan.",
+        [{ text: "OK" }]
+      );
+    }
+  }, [isMocked]);
 
   const handleDeliveryPress = (deliveryId: string) => {
-    console.log("Navigate to delivery:", deliveryId);
     router.push(`/delivery/${deliveryId}`);
   };
 
@@ -154,7 +149,6 @@ const DashboardDriver = () => {
       </SafeAreaView>
     );
   }
-
 
   const deliveries = deliveriesData?.data || null;
 

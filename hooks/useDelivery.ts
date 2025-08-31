@@ -1,4 +1,3 @@
-
 import api from "@/services/axios";
 import { useQuery } from "@tanstack/react-query";
 
@@ -114,7 +113,6 @@ interface RouteResponse {
 // API functions
 const fetchActiveDeliveries = async (): Promise<DeliveryResponse> => {
   const response = await api.get("/api/delivery/active");
-  console.log(response.data);
 
   if (response.status !== 200) {
     throw new Error("Failed to fetch active deliveries");
@@ -135,7 +133,9 @@ const fetchActiveDeliveriesWorker = async (
   return response.data;
 };
 
-const fetchDeliveryDetail = async (delivery_id: string): Promise<DeliveryDetailResponse> => {
+const fetchDeliveryDetail = async (
+  delivery_id: string
+): Promise<DeliveryDetailResponse> => {
   const response = await api.get(`/api/delivery/${delivery_id}`);
 
   if (response.status !== 200) {
@@ -211,7 +211,7 @@ export const useDeliveryByWorker = (worker_id: string) => {
 };
 export const useDeliveryDetailsByWorker = () => {
   return useQuery({
-    queryKey: ["worker_deliveries" ],
+    queryKey: ["worker_deliveries"],
     queryFn: fetchDeliveryByWorker,
     // refetchInterval: 30000, // Refetch every 30 seconds
     staleTime: 20000, // Consider data stale after 20 seconds
@@ -280,9 +280,7 @@ export const useTrucks = (truck_ids: string[]) => {
   return useQuery({
     queryKey: ["trucks", truck_ids],
     queryFn: async () => {
-      const trucks = await Promise.all(
-        truck_ids.map((id) => fetchTruck(id))
-      );
+      const trucks = await Promise.all(truck_ids.map((id) => fetchTruck(id)));
       return trucks.reduce(
         (acc, truck) => {
           acc[truck.data.id] = truck.data;
@@ -301,9 +299,7 @@ export const useRoutes = (route_ids: string[]) => {
   return useQuery({
     queryKey: ["routes", route_ids],
     queryFn: async () => {
-      const routes = await Promise.all(
-        route_ids.map((id) => fetchRoute(id))
-      );
+      const routes = await Promise.all(route_ids.map((id) => fetchRoute(id)));
       return routes.reduce(
         (acc, route) => {
           acc[route.data.id] = route.data;
@@ -328,11 +324,11 @@ export const useDeliveryWithDetails = (delivery: Delivery) => {
     worker: workerQuery.data?.data,
     truck: truckQuery.data?.data,
     route: routeQuery.data?.data,
-    isLoading: workerQuery.isLoading || truckQuery.isLoading || routeQuery.isLoading,
+    isLoading:
+      workerQuery.isLoading || truckQuery.isLoading || routeQuery.isLoading,
     error: workerQuery.error || truckQuery.error || routeQuery.error,
   };
 };
-
 
 // Types based on snake_case payload
 export interface DeliveryHistoryItem {

@@ -10,8 +10,6 @@ const TabLayoutDriver = () => {
 
   const { isAuthenticated, isLoading } = useAuthStatus();
 
-  console.log(isAuthenticated);
-
   if (isLoading) {
     return (
       <View className="flex-1 justify-center items-center">

@@ -1,27 +1,27 @@
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  StatusBar,
-} from "react-native";
-import React, { useEffect, useState } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { useRoute, useTruck, useWorker } from "@/hooks/useDelivery";
 import { useDeliveryDetail } from "@/hooks/useDeliveryDetail";
-import { useWorker, useTruck, useRoute } from "@/hooks/useDelivery";
-import { getCityName, useCities } from "@/hooks/useTransit";
 import { usePositionDrivers } from "@/hooks/usePositionDrivers"; // Add this import
+import { getCityName, useCities } from "@/hooks/useTransit";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DeliveryDetail = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout |number| null>(
-    null
-  );
+  const [refreshInterval, setRefreshInterval] = useState<
+    NodeJS.Timeout | number | null
+  >(null);
 
   const delivery_id = Array.isArray(id) ? id[0] : id;
 
@@ -32,11 +32,7 @@ const DeliveryDetail = () => {
   } = useDeliveryDetail(delivery_id);
 
   const delivery = delivery_data?.data;
-  delivery?.transits.forEach((transit) => {
-    console.log({ transit });
-  });
-
-  console.log({delivery});
+  delivery?.transits.forEach((transit) => {});
 
   const { data: worker_data } = useWorker(delivery?.worker_id || "");
   const { data: truck_data } = useTruck(delivery?.truck_id || "");
@@ -51,14 +47,11 @@ const DeliveryDetail = () => {
     refetch: refetchPosition,
   } = usePositionDrivers(delivery_id || "");
 
-
   const worker = worker_data?.data;
   const truck = truck_data?.data;
   const route = route_data?.data;
   const positions = positionData?.data || [];
   const currentPosition = positions.length > 0 ? positions[0] : null; // Latest position
-
-  console.log(currentPosition);
 
   // Auto-refresh positions for active deliveries
   useEffect(() => {
@@ -83,7 +76,12 @@ const DeliveryDetail = () => {
         setRefreshInterval(null);
       }
     }
-  }, [delivery?.started_at, delivery?.finished_at, refetchPosition, refreshInterval]);
+  }, [
+    delivery?.started_at,
+    delivery?.finished_at,
+    refetchPosition,
+    refreshInterval,
+  ]);
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString("id-ID", {
