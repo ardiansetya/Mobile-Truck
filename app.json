@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "tracking-truck",
+    "slug": "tracking-truck",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo.jpg",
+    "scheme": "trackingtruck",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/logo.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#b6d0fa"
+    },
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.jpg",
+        "backgroundColor": "#b6d0fa"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.michellee.trackingtruck",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/logo.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Tracking Truck to use your location."
+        }
+      ],
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/logo.jpg",
+          "imageWidth": 500,
+          "resizeMode": "contain",
+          "backgroundColor": "#b6d0fa"
+        }
+      ],
+      "expo-maps",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "54b09975-1cef-47e3-80a2-31b2ec99ef82"
+      }
+    },
+    "owner": "michellee"
+  }
+}
