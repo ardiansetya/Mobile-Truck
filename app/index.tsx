@@ -124,7 +124,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
             {error && (
               <View className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3">
-                <Text className="text-red-600 text-center text-sm">{error}</Text>
+                <Text className="text-red-600 text-center text-sm">{error || "Terjadi Kesalahan"}</Text>
               </View>
             )}
 
