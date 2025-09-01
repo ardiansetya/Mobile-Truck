@@ -262,7 +262,6 @@ import {
   User,
 } from "@/types/auth.types";
 import { useQueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios";
 import * as SecureStore from "expo-secure-store";
 import { jwtDecode } from "jwt-decode";
 import React, {
