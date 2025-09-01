@@ -28,7 +28,7 @@ import { useQueryClient } from "@tanstack/react-query";
     const [loginSuccess, setLoginSuccess] = useState(false);
     const queryClient = useQueryClient();
 
-    console.log("index", typeof error);
+    // console.log("index", error);
 
     const {
       control,

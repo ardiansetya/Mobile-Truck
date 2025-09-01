@@ -7,7 +7,7 @@ import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 
 const extra = Constants.expoConfig?.extra || Constants.manifest2?.extra || {};
-const { apiUrl } = extra as { apiUrl: string };;
+const { apiUrl } = extra as { apiUrl: string };
 
 // console.log("API_URL:", apiUrl);
 
