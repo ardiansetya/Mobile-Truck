@@ -4,13 +4,13 @@
     "slug": "tracking-truck",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icons/logo.png",
+    "icon": "./assets/icons/icon.png",
     "scheme": "trackingtruck",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/icons/logo.png",
+      "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#b6d0fa"
+      "backgroundColor": "#ffffff"
     },
     "newArchEnabled": true,
     "ios": {
@@ -18,8 +18,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icons/logo.png",
-        "backgroundColor": "#b6d0fa"
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.michellee.trackingtruck",
@@ -31,7 +31,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/icons/logo.png"
+      "favicon": "./assets/icons/icon.png"
     },
     "plugins": [
       [
@@ -44,10 +44,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/icons/logo.png",
-          "imageWidth": 500,
+          "image": "./assets/images/splash.png",
+          "imageWidth": 800,
           "resizeMode": "contain",
-          "backgroundColor": "#b6d0fa"
+          "backgroundColor": "#ffffff"
         }
       ],
       "expo-maps",

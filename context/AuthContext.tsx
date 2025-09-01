@@ -262,6 +262,7 @@ import {
   User,
 } from "@/types/auth.types";
 import { useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import * as SecureStore from "expo-secure-store";
 import { jwtDecode } from "jwt-decode";
 import React, {
@@ -400,28 +401,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
     } catch (error: any) {
-      console.error("❌ Login failed:", error);
-      
-      // Handle different error formats
-      let errorMessage = "Login gagal";
-      
-      if (error?.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        if (typeof errors === 'string') {
-          errorMessage = errors;
-        } else if (Array.isArray(errors)) {
-          errorMessage = errors[0] || errorMessage;
-        } else if (typeof errors === 'object') {
-          const firstError = Object.values(errors)[0];
-          errorMessage = Array.isArray(firstError) ? firstError[0] : String(firstError);
-        }
-      } else if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-      
-      throw new Error(errorMessage);
+      console.error(
+        "❌ Login failed:",
+        error.response.data.errors || error.response
+      );
+      throw error.response.data.errors;
     } finally {
       setLoading(false);
     }

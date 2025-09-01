@@ -4,8 +4,14 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import * as SecureStore from "expo-secure-store";
+import Constants from "expo-constants";
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://154.19.37.110:8080";
+const extra = Constants.expoConfig?.extra || Constants.manifest2?.extra || {};
+const { apiUrl } = extra as { apiUrl: string };;
+
+// console.log("API_URL:", apiUrl);
+
+// const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://154.19.37.110:8080";
 
 // Token storage keys
 const ACCESS_TOKEN_KEY = "access_token";
@@ -16,7 +22,7 @@ let refresh_tokenPromise: Promise<string | null> | null = null;
 
 // Create axios instance
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: apiUrl,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -95,7 +101,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
     }
 
     const refreshApi = axios.create({
-      baseURL: BASE_URL,
+      baseURL: apiUrl,
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
