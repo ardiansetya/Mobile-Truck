@@ -28,6 +28,8 @@ import { useQueryClient } from "@tanstack/react-query";
     const [loginSuccess, setLoginSuccess] = useState(false);
     const queryClient = useQueryClient();
 
+    console.log(error);
+
 
     const {
       control,
@@ -124,7 +126,11 @@ import { useQueryClient } from "@tanstack/react-query";
 
             {error && (
               <View className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3">
-                <Text className="text-red-600 text-center text-sm">{error || "Terjadi Kesalahan"}</Text>
+                <Text className="text-red-600 text-center text-sm">
+                  {typeof error === "string"
+                    ? error
+                    : error?.message || "Terjadi Kesalahan"}
+                </Text>
               </View>
             )}
 
