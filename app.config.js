@@ -29,7 +29,15 @@ export default {
                 "android.permission.ACCESS_COARSE_LOCATION",
                 "android.permission.ACCESS_FINE_LOCATION",
             ],
-            usesCleartextTraffic : true
+            usesCleartextTraffic: true,
+            networkSecurityConfig: {
+                "domain-config": [
+                    {
+                        "domain": "154.19.37.110",
+                        "cleartextTrafficPermitted": true
+                    }
+                ]
+              }
         },
         web: {
             bundler: "metro",
