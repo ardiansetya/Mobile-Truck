@@ -59,10 +59,7 @@ export default {
                 'expo-build-properties',
                 {
                     android: {
-                        usesCleartextTraffic: true, // ? enable HTTP requests
-                    },
-                    ios: {
-                        flipper: true,
+                        usesCleartextTraffic: true,
                     },
                 },
             ],
@@ -72,7 +69,7 @@ export default {
         },
         extra: {
             router: {},
-            apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "http://154.19.37.110:8080", 
+            apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "http://154.19.37.110:8080",
             eas: {
                 projectId: "54b09975-1cef-47e3-80a2-31b2ec99ef82",
             },
