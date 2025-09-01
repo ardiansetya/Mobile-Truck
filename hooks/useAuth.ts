@@ -20,8 +20,24 @@ export const useLogin = () => {
 
         await login(payload);
       } catch (err: Error | any) {
-        setError(err || "Login failed");
-        throw err.response.data.errors;
+        let message = "Login failed";
+
+        if (err?.response?.data?.errors) {
+          // kalau errors object, ambil salah satu pesan
+          if (typeof err.response.data.errors === "string") {
+            message = err.response.data.errors;
+          } else if (typeof err.response.data.errors === "object") {
+            const firstError = Object.values(err.response.data.errors)[0];
+            message = Array.isArray(firstError)
+              ? firstError[0]
+              : String(firstError);
+          }
+        } else if (err?.message) {
+          message = err.message;
+        }
+
+        setError(message);
+        throw err;
       } finally {
         setIsLoading(false);
       }
