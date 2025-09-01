@@ -28,8 +28,7 @@ import { useQueryClient } from "@tanstack/react-query";
     const [loginSuccess, setLoginSuccess] = useState(false);
     const queryClient = useQueryClient();
 
-    const stringErr = JSON.stringify(error);
-
+    console.log("index", typeof error);
 
     const {
       control,
@@ -127,7 +126,7 @@ import { useQueryClient } from "@tanstack/react-query";
             {error && (
               <View className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3">
                 <Text className="text-red-600 text-center text-sm">
-                  {typeof error === "string" ? error : stringErr}
+                  {error}
                 </Text>
               </View>
             )}

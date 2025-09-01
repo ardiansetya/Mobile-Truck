@@ -382,34 +382,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Missing tokens in response");
       }
 
-      // Store tokens
       await Promise.all([
         SecureStore.setItemAsync(ACCESS_TOKEN_KEY, newAccessToken),
         SecureStore.setItemAsync(REFRESH_TOKEN_KEY, newRefreshToken),
       ]);
 
-      // Update state
       setAccessToken(newAccessToken);
       setRefreshToken(newRefreshToken);
-      
-      // Invalidate queries to ensure fresh data
-      try {
-        await queryClient.invalidateQueries({ queryKey: ["user_profile"] });
-        await queryClient.invalidateQueries({ queryKey: ["validate_role"] });
-      } catch (queryError) {
-        console.warn("Failed to invalidate queries:", queryError);
+
+      await queryClient.invalidateQueries({ queryKey: ["user_profile"] });
+      await queryClient.invalidateQueries({ queryKey: ["validate_role"] });
+    } catch (error: any) {
+      let message = "Login gagal";
+
+      if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error?.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        if (typeof errors === "string") {
+          message = errors;
+        } else if (typeof errors === "object") {
+          const firstError = Object.values(errors)[0];
+          message = Array.isArray(firstError)
+            ? firstError[0]
+            : String(firstError);
+        }
+      } else if (error?.message) {
+        message = error.message;
       }
 
-    } catch (error: any) {
-      console.error(
-        "❌ Login failed:",
-        error.response.data.errors || error.response
-      );
-      throw error.response.data.errors;
+      console.error("❌ Login failed:", message);
+      throw new Error(message); 
     } finally {
       setLoading(false);
     }
   };
+  
 
   // Register function
   const register = async (userData: RegisterRequest): Promise<void> => {
