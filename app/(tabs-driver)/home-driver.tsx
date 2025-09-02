@@ -173,9 +173,16 @@ console.log(error);
         }>
         {/* Header with Location Status */}
         <View style={{ marginTop: insets.top }} className="mb-6">
-          <Text className="text-2xl font-bold text-gray-800 mb-4">
-            Delivery Aktif
-          </Text>
+          <View>
+            <Text className="text-2xl font-bold text-gray-800 mb-4">
+              Delivery Aktif
+            </Text>
+            <TouchableOpacity
+              className="bg-blue-600 px-6 py-3 rounded-xl"
+              onPress={() => router.push(`/delivery/history/${worker_id}`)}>
+              <Text className="text-white font-semibold">History Pengiriman</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Fake GPS Warning Banner */}
           {isMocked && (
@@ -295,7 +302,7 @@ console.log(error);
         </View>
 
         {/* Delivery List */}
-        {!deliveries || !deliveries.id  ? (
+        {!deliveries || !deliveries.id ? (
           <View className="bg-white rounded-2xl p-8 items-center shadow-sm">
             <Ionicons name="cube-outline" size={48} color="#9CA3AF" />
             <Text className="text-gray-500 text-lg font-medium mt-4">

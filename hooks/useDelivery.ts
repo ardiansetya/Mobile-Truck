@@ -357,6 +357,7 @@ export const deliveryHistoryKeys = {
 // Fetch function
 const fetchDeliveryHistory = async (): Promise<DeliveryHistoryResponse> => {
   const response = await api.get("api/delivery/history");
+
   return response.data;
 };
 
@@ -380,5 +381,39 @@ export const useDeliveryHistoryWithFilters = (
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     enabled: true,
+  });
+};
+
+export interface DeliveryHistoryWorker {
+  id: string;
+  worker_id: string;
+  truck_id: string;
+  route_id: string;
+  started_at: number;
+  finished_at: number;
+  add_by_operator_id: string;
+}
+
+export interface DeliveryHistoryWorkerResponse {
+  status: string;
+  data: DeliveryHistoryWorker[];
+}
+
+const fetchDeliveryHistoryByWorkerId = async (workerId: string): Promise<DeliveryHistoryWorkerResponse> => {
+  const response = await api.get(`api/delivery/history/${workerId}`);
+
+  if (response.status !== 200) {
+    throw new Error(`Failed to fetch delivery history for worker ${workerId}`);
+  }
+
+  return response.data;
+};
+
+export const useDeliveryHistoryByWorkerId = (workerId: string) => {
+  return useQuery({
+    queryKey: ["delivery-history", workerId],
+    queryFn: () => fetchDeliveryHistoryByWorkerId(workerId),
+    staleTime: 15 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
   });
 };
