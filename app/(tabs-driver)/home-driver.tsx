@@ -34,6 +34,8 @@ const DashboardDriver = () => {
     isRefetching,
   } = useDeliveryByWorker(worker_id);
 
+  const deliveries = deliveriesData?.data || null;
+
   // Position tracking with automatic start and 15-minute intervals
   const {
     isTracking,
@@ -45,7 +47,7 @@ const DashboardDriver = () => {
     lastSentAt,
     isMocked,
   } = usePositionTracker({
-    autoTrack: true, // Auto-start when component mounts
+    autoTrack: !!deliveries?.id, // when delivery active
     interval: 900000,
   });
 
@@ -127,6 +129,8 @@ const DashboardDriver = () => {
     );
   }
 
+console.log(error);
+
   // Error state
   if (error) {
     return (
@@ -150,7 +154,6 @@ const DashboardDriver = () => {
     );
   }
 
-  const deliveries = deliveriesData?.data || null;
 
   return (
     <View style={{ marginBottom: insets.bottom }} className="flex-1 bg-gray-50">
@@ -292,7 +295,7 @@ const DashboardDriver = () => {
         </View>
 
         {/* Delivery List */}
-        {deliveries === null ? (
+        {!deliveries || !deliveries.id  ? (
           <View className="bg-white rounded-2xl p-8 items-center shadow-sm">
             <Ionicons name="cube-outline" size={48} color="#9CA3AF" />
             <Text className="text-gray-500 text-lg font-medium mt-4">
@@ -304,9 +307,9 @@ const DashboardDriver = () => {
           </View>
         ) : (
           <DeliveryCard
-            key={deliveries!.id}
-            delivery={deliveries!}
-            onPress={() => handleDeliveryPress(deliveries!.id)}
+            key={deliveries.id}
+            delivery={deliveries}
+            onPress={() => handleDeliveryPress(deliveries.id)}
           />
         )}
       </ScrollView>
