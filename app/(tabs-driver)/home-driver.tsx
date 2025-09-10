@@ -36,7 +36,7 @@ const DashboardDriver = () => {
 
   const deliveries = deliveriesData?.data || null;
 
-  // Position tracking with automatic start and 15-minute intervals
+  // Position tracking with background support
   const {
     isTracking,
     location,
@@ -46,9 +46,12 @@ const DashboardDriver = () => {
     sendPositionError,
     lastSentAt,
     isMocked,
+    backgroundTaskRegistered, 
+    startTracking, 
+    stopTracking, 
   } = usePositionTracker({
-    autoTrack: !!deliveries?.id, // when delivery active
-    interval: 900000,
+    autoTrack: !!deliveries?.id, 
+    interval: 900000, 
   });
 
   const router = useRouter();
@@ -81,39 +84,93 @@ const DashboardDriver = () => {
     return () => clearInterval(countdownInterval);
   }, [isTracking, lastSentAt]);
 
-  // Handle location errors with automatic retry
+  // ✅ Enhanced error handling with user feedback for critical issues
   useEffect(() => {
     if (locationError) {
       console.error("Location error detected:", locationError);
-      // Just log the error, don't show alert for automatic system
-      // The system will automatically retry in the next interval
+
+      // Show alert only for critical permission errors
+      if (
+        locationError.includes("permission") ||
+        locationError.includes("denied")
+      ) {
+        Alert.alert(
+          "Izin Lokasi Diperlukan",
+          "Aplikasi memerlukan izin lokasi untuk melacak pengiriman. Silakan aktifkan di pengaturan.",
+          [
+            { text: "Batal", style: "cancel" },
+            {
+              text: "Pengaturan",
+              onPress: () => {
+                // Could open device settings here if needed
+                console.log("Open device settings for location permission");
+              },
+            },
+          ]
+        );
+      }
     }
   }, [locationError]);
 
-  // Handle position send errors (silent logging for automatic system)
+  // ✅ Handle critical position send errors
   useEffect(() => {
     if (sendPositionError) {
-      console.error("Automatic position send error:", sendPositionError);
-      // Silent error handling - system will automatically retry in next interval
+      console.error("Position send error:", sendPositionError);
+
+      // Only show user-facing error for network issues that persist
+      // Most errors should be handled silently by the auto-retry mechanism
     }
   }, [sendPositionError]);
 
-  const handleRefresh = () => {
-    refetch();
-  };
-
+  // ✅ Enhanced fake GPS detection
   useEffect(() => {
     if (isMocked) {
       Alert.alert(
         "🚨 Fake GPS Terdeteksi",
-        "Lokasi kamu terdeteksi menggunakan aplikasi Fake GPS. Matikan aplikasi tersebut untuk melanjutkan.",
+        "Lokasi kamu terdeteksi menggunakan aplikasi Fake GPS. Matikan aplikasi tersebut untuk melanjutkan tracking pengiriman.",
         [{ text: "OK" }]
       );
     }
   }, [isMocked]);
 
+  // ✅ Monitor delivery status changes for tracking control
+  useEffect(() => {
+    console.log(
+      `📦 Delivery status changed. Active: ${!!deliveries?.id}, Tracking: ${isTracking}`
+    );
+
+    // Log background task status
+    if (backgroundTaskRegistered) {
+      console.log("✅ Background tracking is active");
+    } else if (isTracking) {
+      console.log(
+        "⚠️ Foreground tracking only - background may not be available"
+      );
+    }
+  }, [deliveries?.id, isTracking, backgroundTaskRegistered]);
+
+  const handleRefresh = () => {
+    refetch();
+  };
+
   const handleDeliveryPress = (deliveryId: string) => {
     router.push(`/delivery/${deliveryId}`);
+  };
+
+  // ✅ Manual tracking controls (for debugging or manual override)
+  const handleManualTrackingToggle = () => {
+    if (isTracking) {
+      Alert.alert(
+        "Stop Tracking",
+        "Apakah Anda yakin ingin menghentikan tracking lokasi?",
+        [
+          { text: "Batal", style: "cancel" },
+          { text: "Stop", onPress: stopTracking, style: "destructive" },
+        ]
+      );
+    } else {
+      startTracking();
+    }
   };
 
   // Loading state
@@ -129,7 +186,7 @@ const DashboardDriver = () => {
     );
   }
 
-console.log(error);
+  console.log(error);
 
   // Error state
   if (error) {
@@ -153,7 +210,6 @@ console.log(error);
       </SafeAreaView>
     );
   }
-
 
   return (
     <View style={{ marginBottom: insets.bottom }} className="flex-1 bg-gray-50">
@@ -180,21 +236,29 @@ console.log(error);
             <TouchableOpacity
               className="bg-blue-600 px-6 py-3 rounded-xl"
               onPress={() => router.push(`/delivery/history/${worker_id}`)}>
-              <Text className="text-white font-semibold">History Pengiriman</Text>
+              <Text className="text-white font-semibold">
+                History Pengiriman
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Fake GPS Warning Banner */}
+          {/* ✅ Enhanced Fake GPS Warning Banner */}
           {isMocked && (
-            <View className="bg-red-100 border border-red-400 rounded-xl p-3 mb-4 flex-row items-center">
-              <Ionicons name="alert-circle" size={20} color="#DC2626" />
-              <Text className="text-red-700 font-medium ml-2">
-                Fake GPS terdeteksi! Nonaktifkan segera 🚨
+            <View className="bg-red-100 border border-red-400 rounded-xl p-3 mb-4">
+              <View className="flex-row items-center mb-2">
+                <Ionicons name="alert-circle" size={20} color="#DC2626" />
+                <Text className="text-red-700 font-bold ml-2">
+                  Fake GPS Terdeteksi! 🚨
+                </Text>
+              </View>
+              <Text className="text-red-600 text-sm ml-6">
+                Tracking pengiriman dihentikan sementara. Nonaktifkan aplikasi
+                fake GPS untuk melanjutkan.
               </Text>
             </View>
           )}
 
-          {/* Status Overview Card */}
+          {/* ✅ Enhanced Status Overview Card */}
           <View className="bg-white rounded-2xl p-4 shadow-sm">
             <View className="flex-row items-center justify-between mb-3">
               <View className="flex-row items-center">
@@ -213,35 +277,64 @@ console.log(error);
             </View>
 
             <View className="space-y-2">
-              {/* Tracking Status */}
+              {/* ✅ Enhanced Tracking Status */}
               <View className="flex-row items-center">
                 <View
                   className={`w-2 h-2 rounded-full mr-3 ${
-                    isLoadingLocation
-                      ? "bg-yellow-500"
-                      : isTracking
-                        ? "bg-green-500"
-                        : "bg-gray-400"
+                    isMocked
+                      ? "bg-red-500"
+                      : isLoadingLocation
+                        ? "bg-yellow-500"
+                        : isTracking
+                          ? "bg-green-500"
+                          : "bg-gray-400"
                   }`}
                 />
                 <Text
                   className={`text-sm font-medium ${
-                    isLoadingLocation
-                      ? "text-yellow-600"
-                      : isTracking
-                        ? "text-green-600"
-                        : "text-gray-500"
+                    isMocked
+                      ? "text-red-600"
+                      : isLoadingLocation
+                        ? "text-yellow-600"
+                        : isTracking
+                          ? "text-green-600"
+                          : "text-gray-500"
                   }`}>
-                  {isLoadingLocation
-                    ? "Menginisialisasi lokasi..."
-                    : isTracking
-                      ? "Auto-tracking aktif "
-                      : "Menghubungkan ke layanan lokasi..."}
+                  {isMocked
+                    ? "Fake GPS - Tracking dihentikan"
+                    : isLoadingLocation
+                      ? "Menginisialisasi lokasi..."
+                      : isTracking
+                        ? "Auto-tracking aktif"
+                        : deliveries?.id
+                          ? "Memulai tracking..."
+                          : "Menunggu delivery aktif"}
                 </Text>
               </View>
 
+              {/* ✅ Background Status Indicator */}
+              {isTracking && (
+                <View className="flex-row items-center">
+                  <View
+                    className={`w-2 h-2 rounded-full mr-3 ${
+                      backgroundTaskRegistered ? "bg-blue-500" : "bg-orange-500"
+                    }`}
+                  />
+                  <Text
+                    className={`text-xs ${
+                      backgroundTaskRegistered
+                        ? "text-blue-600"
+                        : "text-orange-600"
+                    }`}>
+                    {backgroundTaskRegistered
+                      ? "Background tracking aktif"
+                      : "Foreground only - mungkin terbatas saat app tertutup"}
+                  </Text>
+                </View>
+              )}
+
               {/* Location Info */}
-              {location && (
+              {location && !isMocked && (
                 <View className="flex-row items-start">
                   <Ionicons
                     name="location"
@@ -260,7 +353,7 @@ console.log(error);
               )}
 
               {/* Last Sent Info */}
-              {isTracking && lastSentAt && (
+              {isTracking && lastSentAt && !isMocked && (
                 <View className="flex-row items-center">
                   <Ionicons name="checkmark-circle" size={14} color="#10B981" />
                   <Text className="text-xs text-gray-500 ml-2">
@@ -270,7 +363,7 @@ console.log(error);
               )}
 
               {/* Next Update Countdown */}
-              {nextUpdateCountdown && isTracking && (
+              {nextUpdateCountdown && isTracking && !isMocked && (
                 <View className="flex-row items-center">
                   <Ionicons name="timer-outline" size={14} color="#2563EB" />
                   <Text className="text-xs text-blue-600 ml-2 font-medium">
@@ -279,25 +372,52 @@ console.log(error);
                 </View>
               )}
 
-              {/* Error Indicators */}
-              {!isTracking && !isLoadingLocation && (
+              {/* ✅ Enhanced Error Indicators */}
+              {!isTracking &&
+                !isLoadingLocation &&
+                deliveries?.id &&
+                !isMocked && (
+                  <View className="flex-row items-center">
+                    <Ionicons name="sync" size={14} color="#F59E0B" />
+                    <Text className="text-xs text-orange-600 ml-2">
+                      Memulai tracking otomatis...
+                    </Text>
+                  </View>
+                )}
+
+              {locationError && (
                 <View className="flex-row items-center">
-                  <Ionicons name="sync" size={14} color="#F59E0B" />
-                  <Text className="text-xs text-orange-600 ml-2">
-                    Memulai tracking otomatis...
+                  <Ionicons name="warning-outline" size={14} color="#EF4444" />
+                  <Text className="text-xs text-red-600 ml-2" numberOfLines={2}>
+                    Masalah lokasi: {locationError}
                   </Text>
                 </View>
               )}
 
               {sendPositionError && (
                 <View className="flex-row items-center">
-                  <Ionicons name="warning-outline" size={14} color="#F59E0B" />
+                  <Ionicons
+                    name="cloud-offline-outline"
+                    size={14}
+                    color="#F59E0B"
+                  />
                   <Text className="text-xs text-orange-600 ml-2">
                     Masalah koneksi - akan mencoba lagi otomatis
                   </Text>
                 </View>
               )}
             </View>
+
+            {/* ✅ Debug/Manual Controls (can be removed in production) */}
+            {__DEV__ && (
+              <TouchableOpacity
+                onPress={handleManualTrackingToggle}
+                className="mt-3 p-2 bg-gray-100 rounded-lg">
+                <Text className="text-xs text-gray-600 text-center">
+                  Debug: {isTracking ? "Stop" : "Start"} Manual Tracking
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -309,7 +429,7 @@ console.log(error);
               Tidak Ada Delivery Aktif
             </Text>
             <Text className="text-gray-400 text-center mt-2">
-              Belum ada delivery yang sedang berjalan saat ini
+              Tracking lokasi akan dimulai otomatis saat ada delivery baru
             </Text>
           </View>
         ) : (

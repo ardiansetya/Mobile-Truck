@@ -55,7 +55,9 @@
     "react-native-webview": "13.13.5",
     "tailwindcss": "^3.4.17",
     "zod": "^4.0.10",
-    "expo-build-properties": "~0.14.8"
+    "expo-build-properties": "~0.14.8",
+    "expo-background-fetch": "~13.1.6",
+    "expo-task-manager": "~13.1.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
