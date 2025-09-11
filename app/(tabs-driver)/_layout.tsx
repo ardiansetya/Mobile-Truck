@@ -200,6 +200,24 @@ const TabLayoutDriver = () => {
         }}
       />
       <Tabs.Screen
+        name="history-delivery"
+        options={{
+          header: () => <CustomHeader />,
+          tabBarLabel: "History",
+          tabBarIcon: ({ focused, color }) => (
+            <View className="items-center h-full">
+              <Ionicons name="albums-outline" size={24} color={color} />
+              <Text
+                className={`text-xs mt-1 ${
+                  focused ? "text-blue-600 font-medium" : "text-gray-500"
+                }`}>
+                History
+              </Text>
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",

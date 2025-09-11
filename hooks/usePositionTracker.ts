@@ -1,11 +1,11 @@
+import api from "@/services/axios";
 import { useMutation } from "@tanstack/react-query";
-import { useState, useCallback, useRef, useEffect } from "react";
-import { useLocation, LocationData } from "./useLocation";
-import * as TaskManager from "expo-task-manager";
 import * as BackgroundFetch from "expo-background-fetch";
 import * as Location from "expo-location";
+import * as TaskManager from "expo-task-manager";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, AppStateStatus } from "react-native";
-import api from "@/services/axios";
+import { LocationData, useLocation } from "./useLocation";
 
 interface PositionPayload {
   latitude: number;
@@ -37,6 +37,10 @@ interface UsePositionTrackerReturn {
 const BACKGROUND_LOCATION_TASK = "background-location-task";
 const BACKGROUND_FETCH_TASK = "background-fetch-task";
 
+// Global variables to track last send time and prevent spam
+let lastBackgroundSendTime = 0;
+let backgroundSendInterval = 900000; // 15 minutes default
+
 // API function to send position
 const sendPositionToAPI = async (position: PositionPayload): Promise<any> => {
   try {
@@ -53,7 +57,7 @@ const sendPositionToAPI = async (position: PositionPayload): Promise<any> => {
   }
 };
 
-// Background location task
+// Background location task with throttling
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
     console.error("❌ Background location error:", error);
@@ -63,22 +67,30 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
   if (data) {
     const { locations } = data as any;
     const location = locations[0];
+    const currentTime = Date.now();
+
+    // Throttle background sends to prevent spam
+    if (currentTime - lastBackgroundSendTime < backgroundSendInterval) {
+      console.log(
+        `⏳ Background send throttled. Next send in ${Math.round((backgroundSendInterval - (currentTime - lastBackgroundSendTime)) / 1000)}s`
+      );
+      return;
+    }
 
     if (location && !location.mocked) {
       const payload: PositionPayload = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        recorded_at: Math.floor(Date.now() / 1000),
+        recorded_at: Math.floor(currentTime / 1000),
       };
 
       try {
         await sendPositionToAPI(payload);
-        console.log("✅ Background position sent:", payload);
+        lastBackgroundSendTime = currentTime;
       } catch (error) {
         console.error("❌ Failed to send background position:", error);
       }
     } else {
-      console.log("🚫 Mocked location detected in background, skipping");
     }
   }
 });
@@ -86,6 +98,13 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
 // Background fetch task
 TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   try {
+    const currentTime = Date.now();
+
+    // Throttle background fetch as well
+    if (currentTime - lastBackgroundSendTime < backgroundSendInterval) {
+      return BackgroundFetch.BackgroundFetchResult.NoData;
+    }
+
     // Get current location
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
@@ -93,18 +112,19 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
     }
 
     const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
+      accuracy: Location.Accuracy.Balanced, // Changed from High to Balanced
     });
 
     if (location && !location.mocked) {
       const payload: PositionPayload = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        recorded_at: Math.floor(Date.now() / 1000),
+        recorded_at: Math.floor(currentTime / 1000),
       };
 
       await sendPositionToAPI(payload);
-      console.log("✅ Background fetch position sent:", payload);
+      lastBackgroundSendTime = currentTime;
+
       return BackgroundFetch.BackgroundFetchResult.NewData;
     }
 
@@ -127,7 +147,6 @@ export const usePositionTracker = (
   const intervalRef = useRef<NodeJS.Timeout | number | null>(null);
   const isInitialized = useRef(false);
   const locationRef = useRef<LocationData | null>(null);
-  
 
   const {
     location,
@@ -143,23 +162,31 @@ export const usePositionTracker = (
   useEffect(() => {
     if (location) {
       locationRef.current = location;
-      console.log("📍 Location ref updated:", location);
     }
   }, [location]);
+
+  // Update global interval when hook interval changes
+  useEffect(() => {
+    backgroundSendInterval = interval;
+    console.log(
+      "⚙️ Background send interval updated to:",
+      interval / 60000,
+      "minutes"
+    );
+  }, [interval]);
 
   // Mutation for sending position to API
   const sendPositionMutation = useMutation({
     mutationFn: sendPositionToAPI,
     onSuccess: (data) => {
       setLastSentAt(new Date());
-      console.log("✅ Position sent successfully:", data);
     },
     onError: (error: Error) => {
       console.error("❌ Failed to send position:", error.message);
     },
   });
 
-  // Setup background tasks
+  // Setup background tasks with fixed configuration
   const setupBackgroundTasks = useCallback(async () => {
     try {
       // Request background permissions
@@ -170,27 +197,37 @@ export const usePositionTracker = (
         return false;
       }
 
-      // Register background fetch
-      await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
-        minimumInterval: interval, // 15 minutes
-        stopOnTerminate: false, // Continue after app is killed
-        startOnBoot: true, // Start when device boots
-      });
+      // Register background fetch with new API
+      await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK);
 
-      // Start background location tracking
+      // Set minimum interval separately
+      await BackgroundFetch.setMinimumIntervalAsync(interval);
+      console.log(
+        "✅ Background fetch registered with interval:",
+        interval / 60000,
+        "minutes"
+      );
+
+      // Start background location tracking with optimized settings
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-        accuracy: Location.Accuracy.High,
-        timeInterval: interval, // 15 minutes
-        distanceInterval: 0, // Send regardless of distance
-        deferredUpdatesInterval: interval,
+        accuracy: Location.Accuracy.Balanced, // Changed from High to Balanced
+        timeInterval: Math.max(interval, 60000), // At least 1 minute, use interval if higher
+        distanceInterval: 10, // Only update if moved 10 meters
+        deferredUpdatesInterval: interval, // Defer updates to save battery
+        pausesUpdatesAutomatically: true, // Pause when device is stationary
         foregroundService: {
           notificationTitle: "Tracking Location",
           notificationBody: "App is tracking your location in the background",
+          notificationColor: "#000000",
         },
       });
 
       setBackgroundTaskRegistered(true);
-      console.log("✅ Background tasks registered successfully");
+      console.log(
+        "✅ Background location started with interval:",
+        interval / 60000,
+        "minutes"
+      );
       return true;
     } catch (error) {
       console.error("❌ Failed to setup background tasks:", error);
@@ -211,12 +248,10 @@ export const usePositionTracker = (
 
       if (isLocationTaskRegistered) {
         await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-        console.log("✅ Background location stopped");
       }
 
       if (isFetchTaskRegistered) {
         await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
-        console.log("✅ Background fetch unregistered");
       }
 
       setBackgroundTaskRegistered(false);
@@ -228,10 +263,7 @@ export const usePositionTracker = (
   // Get current location with timeout
   const getLocationWithTimeout = useCallback(
     async (timeoutMs: number = 5000): Promise<LocationData | null> => {
-      console.log("📍 Getting location with timeout:", timeoutMs, "ms");
-
       if (locationRef.current) {
-        console.log("✅ Using cached location from ref");
         return locationRef.current;
       }
 
@@ -254,17 +286,13 @@ export const usePositionTracker = (
 
   // Send position with robust location handling
   const sendPositionRobust = useCallback(async (): Promise<boolean> => {
-    console.log("🔄 Attempting to send position...");
-
     const currentLocation = await getLocationWithTimeout(3000);
 
     if (!currentLocation) {
-      console.log("❌ No location available after timeout, skipping send");
       return false;
     }
 
     if (currentLocation.mocked) {
-      console.log("🚫 Fake GPS detected, skipping send");
       return false;
     }
 
@@ -275,9 +303,8 @@ export const usePositionTracker = (
         recorded_at: Math.floor(Date.now() / 1000),
       };
 
-      console.log("📤 Sending position:", payload);
       await sendPositionMutation.mutateAsync(payload);
-      console.log("✅ Position sent successfully!");
+
       return true;
     } catch (error) {
       console.error("❌ Failed to send position:", error);
@@ -295,7 +322,6 @@ export const usePositionTracker = (
 
   // Interval function for automatic sending
   const intervalSendPosition = useCallback(async () => {
-    console.log("⏰ Interval triggered - attempting automatic send");
     await sendPositionRobust();
   }, [sendPositionRobust]);
 
@@ -309,7 +335,6 @@ export const usePositionTracker = (
         (currentState === "inactive" || currentState === "background") &&
         nextAppState === "active"
       ) {
-        console.log("📱 App has come to the foreground!");
         if (isTracking) {
           sendPositionRobust();
         }
@@ -323,17 +348,15 @@ export const usePositionTracker = (
   // Start tracking
   const startTracking = useCallback(async () => {
     if (isTracking) {
-      console.log("⚠️ Already tracking, skipping start");
       return;
     }
 
-    console.log("🚀 Starting automatic position tracking...");
-    console.log("📊 Interval:", interval, "ms (", interval / 60000, "minutes)");
-
     try {
+      // Reset last send time when starting tracking
+      lastBackgroundSendTime = 0;
+
       // Start foreground location tracking
       await startWatchingLocation();
-      console.log("📍 Foreground location watching started");
 
       // Setup background tasks
       const backgroundSetup = await setupBackgroundTasks();
@@ -344,17 +367,18 @@ export const usePositionTracker = (
       const initialSuccess = await sendPositionRobust();
 
       if (initialSuccess) {
-        console.log("✅ Initial position sent successfully");
       } else {
-        console.log("⚠️ Initial send failed, will retry in first interval");
       }
 
       // Set up foreground interval as backup
       intervalRef.current = setInterval(intervalSendPosition, interval);
-      console.log("✅ Foreground interval set up");
+      console.log(
+        "✅ Foreground interval set up with",
+        interval / 60000,
+        "minutes"
+      );
 
       if (backgroundSetup) {
-        console.log("✅ Background tracking enabled");
       } else {
         console.log(
           "⚠️ Background tracking not available, using foreground only"
@@ -376,11 +400,9 @@ export const usePositionTracker = (
   // Stop tracking
   const stopTracking = useCallback(async () => {
     if (!isTracking) {
-      console.log("⚠️ Not tracking, skipping stop");
       return;
     }
 
-    console.log("🛑 Stopping position tracking...");
     setIsTracking(false);
 
     // Stop foreground tracking
@@ -390,7 +412,6 @@ export const usePositionTracker = (
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
-      console.log("✅ Foreground interval cleared");
     }
 
     // Cleanup background tasks
@@ -409,7 +430,6 @@ export const usePositionTracker = (
   // Auto-start tracking
   useEffect(() => {
     if (autoTrack && !isInitialized.current) {
-      console.log("🚀 Auto-starting automatic position tracking...");
       isInitialized.current = true;
       setTimeout(() => {
         startTracking();
@@ -417,7 +437,6 @@ export const usePositionTracker = (
     }
 
     return () => {
-      console.log("🧹 Cleanup: stopping automatic tracking");
       stopTracking();
     };
   }, []);

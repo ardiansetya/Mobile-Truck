@@ -3,13 +3,13 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from "axios";
-import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
+import * as SecureStore from "expo-secure-store";
 
 const extra = Constants.expoConfig?.extra || Constants.manifest2?.extra || {};
 const { apiUrl } = extra as { apiUrl: string };
 
-// console.log("API_URL:", apiUrl);
+//
 
 // const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://154.19.37.110:8080";
 

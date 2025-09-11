@@ -46,12 +46,12 @@ const DashboardDriver = () => {
     sendPositionError,
     lastSentAt,
     isMocked,
-    backgroundTaskRegistered, 
-    startTracking, 
-    stopTracking, 
+    backgroundTaskRegistered,
+    startTracking,
+    stopTracking,
   } = usePositionTracker({
-    autoTrack: !!deliveries?.id, 
-    interval: 900000, 
+    autoTrack: !!deliveries?.id,
+    interval: 900000,
   });
 
   const router = useRouter();
@@ -103,7 +103,6 @@ const DashboardDriver = () => {
               text: "Pengaturan",
               onPress: () => {
                 // Could open device settings here if needed
-                console.log("Open device settings for location permission");
               },
             },
           ]
@@ -141,7 +140,6 @@ const DashboardDriver = () => {
 
     // Log background task status
     if (backgroundTaskRegistered) {
-      console.log("✅ Background tracking is active");
     } else if (isTracking) {
       console.log(
         "⚠️ Foreground tracking only - background may not be available"
@@ -185,8 +183,6 @@ const DashboardDriver = () => {
       </SafeAreaView>
     );
   }
-
-  console.log(error);
 
   // Error state
   if (error) {
@@ -233,13 +229,6 @@ const DashboardDriver = () => {
             <Text className="text-2xl font-bold text-gray-800 mb-4">
               Delivery Aktif
             </Text>
-            <TouchableOpacity
-              className="bg-blue-600 px-6 py-3 rounded-xl"
-              onPress={() => router.push(`/delivery/history/${worker_id}`)}>
-              <Text className="text-white font-semibold">
-                History Pengiriman
-              </Text>
-            </TouchableOpacity>
           </View>
 
           {/* ✅ Enhanced Fake GPS Warning Banner */}
@@ -408,13 +397,13 @@ const DashboardDriver = () => {
               )}
             </View>
 
-            {/* ✅ Debug/Manual Controls (can be removed in production) */}
-            {__DEV__ && (
+            {/* ✅ start stop Button */}
+            {deliveries && (
               <TouchableOpacity
                 onPress={handleManualTrackingToggle}
                 className="mt-3 p-2 bg-gray-100 rounded-lg">
                 <Text className="text-xs text-gray-600 text-center">
-                  Debug: {isTracking ? "Stop" : "Start"} Manual Tracking
+                  {isTracking ? "Stop" : "Start"} Tracking
                 </Text>
               </TouchableOpacity>
             )}
