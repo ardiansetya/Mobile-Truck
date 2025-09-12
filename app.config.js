@@ -173,7 +173,7 @@ export default {
         },
         extra: {
             router: {},
-            apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "http://154.19.37.110:8080",
+            apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080",
             eas: {
                 projectId: "304eb0ad-4961-4f92-8a18-1647215a4c4d",
             },

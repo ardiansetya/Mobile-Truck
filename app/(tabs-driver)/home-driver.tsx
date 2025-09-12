@@ -3,8 +3,9 @@ import { useDeliveryByWorker } from "@/hooks/useDelivery";
 import { usePositionTracker } from "@/hooks/usePositionTracker";
 import { useProfile } from "@/hooks/useProfile";
 import { Ionicons } from "@expo/vector-icons";
+import * as BackgroundTask from "expo-background-task";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,7 +20,6 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import * as BackgroundTask from "expo-background-task";
 
 const DashboardDriver = () => {
   const insets = useSafeAreaInsets();
@@ -54,7 +54,7 @@ const DashboardDriver = () => {
     triggerBackgroundTaskForTesting, // ✅ UNTUK TESTING
   } = usePositionTracker({
     autoTrack: !!deliveries?.id,
-    interval: 900000, // 15 minutes
+    interval: 30000, // 15 minutes
   });
 
   const router = useRouter();

@@ -1,11 +1,11 @@
 import api from "@/services/axios";
-import { useMutation } from "@tanstack/react-query";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as BackgroundTask from "expo-background-task";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, AppStateStatus } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LocationData, useLocation } from "./useLocation";
 
 interface PositionPayload {
@@ -31,6 +31,7 @@ interface UsePositionTrackerReturn {
   backgroundTaskRegistered: boolean;
   timeUntilNextSend: number; // in seconds
   backgroundTaskStatus: BackgroundTask.BackgroundTaskStatus | null;
+  trackingState: any; // Query state for tracking status
   startTracking: () => void;
   stopTracking: () => void;
   sendCurrentPosition: () => Promise<void>;
@@ -41,6 +42,14 @@ interface UsePositionTrackerReturn {
 const BACKGROUND_LOCATION_TASK = "background-location-task";
 const BACKGROUND_POSITION_TASK = "background-position-task";
 
+// Query keys
+const QUERY_KEYS = {
+  TRACKING_STATE: ["position-tracker", "tracking-state"],
+  LAST_SEND_TIME: ["position-tracker", "last-send-time"],
+  BACKGROUND_TASK_STATUS: ["position-tracker", "background-task-status"],
+  POSITION_HISTORY: ["position-tracker", "position-history"],
+};
+
 // Storage keys
 const STORAGE_KEYS = {
   LAST_SEND_TIME: "position_tracker_last_send_time",
@@ -50,52 +59,69 @@ const STORAGE_KEYS = {
 
 // Global variables with persistent storage
 let lastBackgroundSendTime = 0;
-let backgroundSendInterval = 900000; // 15 minutes default
+let backgroundSendInterval = 30000; // 15 minutes default
 let tasksInitialized = false;
 
-// Initialize from storage
-const initializeFromStorage = async () => {
-  try {
-    const storedLastSendTime = await AsyncStorage.getItem(
-      STORAGE_KEYS.LAST_SEND_TIME
-    );
-    const storedInterval = await AsyncStorage.getItem(
-      STORAGE_KEYS.SEND_INTERVAL
-    );
-
-    if (storedLastSendTime) {
-      lastBackgroundSendTime = parseInt(storedLastSendTime, 10);
+// Storage utilities
+const storageUtils = {
+  async getLastSendTime(): Promise<number> {
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.LAST_SEND_TIME);
+      return stored ? parseInt(stored, 10) : 0;
+    } catch {
+      return 0;
     }
+  },
 
-    if (storedInterval) {
-      backgroundSendInterval = parseInt(storedInterval, 10);
+  async getSendInterval(): Promise<number> {
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.SEND_INTERVAL);
+      return stored ? parseInt(stored, 10) : 30000;
+    } catch {
+      return 30000;
     }
-  } catch (error) {
-    console.error("❌ Failed to initialize from storage:", error);
-  }
-};
+  },
 
-// Save to storage
-const saveToStorage = async (lastSendTime?: number, interval?: number) => {
-  try {
-    if (lastSendTime !== undefined) {
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.LAST_SEND_TIME,
-        lastSendTime.toString()
-      );
-      lastBackgroundSendTime = lastSendTime;
+  async getTrackingState(): Promise<boolean> {
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.TRACKING_STATE);
+      return stored === "true";
+    } catch {
+      return false;
     }
+  },
 
-    if (interval !== undefined) {
+  async saveLastSendTime(time: number): Promise<void> {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.LAST_SEND_TIME, time.toString());
+      lastBackgroundSendTime = time;
+    } catch (error) {
+      console.error("❌ Failed to save last send time:", error);
+    }
+  },
+
+  async saveSendInterval(interval: number): Promise<void> {
+    try {
       await AsyncStorage.setItem(
         STORAGE_KEYS.SEND_INTERVAL,
         interval.toString()
       );
       backgroundSendInterval = interval;
+    } catch (error) {
+      console.error("❌ Failed to save send interval:", error);
     }
-  } catch (error) {
-    console.error("❌ Failed to save to storage:", error);
-  }
+  },
+
+  async saveTrackingState(isTracking: boolean): Promise<void> {
+    try {
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.TRACKING_STATE,
+        isTracking.toString()
+      );
+    } catch (error) {
+      console.error("❌ Failed to save tracking state:", error);
+    }
+  },
 };
 
 // API function to send position
@@ -111,6 +137,16 @@ const sendPositionToAPI = async (position: PositionPayload): Promise<any> => {
   } catch (error) {
     console.error("❌ API Error:", error);
     throw error;
+  }
+};
+
+// Initialize from storage
+const initializeFromStorage = async () => {
+  try {
+    lastBackgroundSendTime = await storageUtils.getLastSendTime();
+    backgroundSendInterval = await storageUtils.getSendInterval();
+  } catch (error) {
+    console.error("❌ Failed to initialize from storage:", error);
   }
 };
 
@@ -160,7 +196,7 @@ const initializeBackgroundTasks = async () => {
 
             try {
               await sendPositionToAPI(payload);
-              await saveToStorage(currentTime);
+              await storageUtils.saveLastSendTime(currentTime);
               console.log("✅ Background location position sent successfully");
             } catch (error) {
               console.error(
@@ -202,8 +238,6 @@ const initializeBackgroundTasks = async () => {
 
         const location = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
-          // maximumAge: 60000, // Accept location up to 1 minute old
-          // timeout: 10000, // 10 second timeout
         });
 
         if (location && !location.mocked) {
@@ -214,7 +248,7 @@ const initializeBackgroundTasks = async () => {
           };
 
           await sendPositionToAPI(payload);
-          await saveToStorage(currentTime);
+          await storageUtils.saveLastSendTime(currentTime);
           console.log("✅ Background task position sent successfully");
           return BackgroundTask.BackgroundTaskResult.Success;
         }
@@ -237,15 +271,12 @@ const initializeBackgroundTasks = async () => {
 export const usePositionTracker = (
   options: UsePositionTrackerOptions = {}
 ): UsePositionTrackerReturn => {
-  const { autoTrack = false, interval = 900000 } = options; // Default 15 minutes
+  const { autoTrack = false, interval = 30000 } = options; // Default 15 minutes
 
   const [isTracking, setIsTracking] = useState(false);
-  const [lastSentAt, setLastSentAt] = useState<Date | null>(null);
   const [backgroundTaskRegistered, setBackgroundTaskRegistered] =
     useState(false);
   const [timeUntilNextSend, setTimeUntilNextSend] = useState(0);
-  const [backgroundTaskStatus, setBackgroundTaskStatus] =
-    useState<BackgroundTask.BackgroundTaskStatus | null>(null);
 
   const intervalRef = useRef<NodeJS.Timeout | number | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | number | null>(null);
@@ -253,6 +284,8 @@ export const usePositionTracker = (
   const locationRef = useRef<LocationData | null>(null);
   const appStateRef = useRef(AppState.currentState);
   const isHandlingAppStateChange = useRef(false);
+
+  const queryClient = useQueryClient();
 
   const {
     location,
@@ -263,6 +296,84 @@ export const usePositionTracker = (
     stopWatchingLocation,
     getCurrentLocation,
   } = useLocation();
+
+  // Query for tracking state
+  const trackingStateQuery = useQuery({
+    queryKey: QUERY_KEYS.TRACKING_STATE,
+    queryFn: storageUtils.getTrackingState,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
+  });
+
+  // Query for last send time
+  const lastSendTimeQuery = useQuery({
+    queryKey: QUERY_KEYS.LAST_SEND_TIME,
+    queryFn: storageUtils.getLastSendTime,
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Query for background task status
+  const backgroundTaskStatusQuery = useQuery({
+    queryKey: QUERY_KEYS.BACKGROUND_TASK_STATUS,
+    queryFn: async () => {
+      try {
+        return await BackgroundTask.getStatusAsync();
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 60000, // 1 minute
+    refetchInterval: 60000,
+  });
+
+  // Mutation for updating tracking state
+  const updateTrackingStateMutation = useMutation({
+    mutationFn: async (isTracking: boolean) => {
+      await storageUtils.saveTrackingState(isTracking);
+      return isTracking;
+    },
+    onSuccess: (isTracking) => {
+      queryClient.setQueryData(QUERY_KEYS.TRACKING_STATE, isTracking);
+      setIsTracking(isTracking);
+    },
+  });
+
+  // Mutation for updating last send time
+  const updateLastSendTimeMutation = useMutation({
+    mutationFn: async (timestamp: number) => {
+      await storageUtils.saveLastSendTime(timestamp);
+      return timestamp;
+    },
+    onSuccess: (timestamp) => {
+      queryClient.setQueryData(QUERY_KEYS.LAST_SEND_TIME, timestamp);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LAST_SEND_TIME });
+    },
+  });
+
+  // Mutation for sending position
+  const sendPositionMutation = useMutation({
+    mutationFn: sendPositionToAPI,
+    onSuccess: async (data) => {
+      const currentTime = Date.now();
+      await updateLastSendTimeMutation.mutateAsync(currentTime);
+      console.log("✅ Position sent successfully");
+    },
+    onError: (error: Error) => {
+      console.error("❌ Failed to send position:", error.message);
+    },
+  });
+
+  // Mutation for initializing background tasks
+  const initializeTasksMutation = useMutation({
+    mutationFn: initializeBackgroundTasks,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.BACKGROUND_TASK_STATUS,
+      });
+    },
+  });
 
   // Update location ref whenever location changes
   useEffect(() => {
@@ -275,21 +386,17 @@ export const usePositionTracker = (
   useEffect(() => {
     const initialize = async () => {
       // Initialize background tasks first
-      await initializeBackgroundTasks();
+      await initializeTasksMutation.mutateAsync();
 
       // Initialize storage
       await initializeFromStorage();
-      await saveToStorage(undefined, interval);
+      await storageUtils.saveSendInterval(interval);
 
-      // Update last sent time display
-      if (lastBackgroundSendTime > 0) {
-        setLastSentAt(new Date(lastBackgroundSendTime));
-      }
-
-      // Get background task status
-      const status = await BackgroundTask.getStatusAsync();
-      setBackgroundTaskStatus(status);
-      console.log("🔄 Background task status:", status);
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LAST_SEND_TIME });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.BACKGROUND_TASK_STATUS,
+      });
     };
 
     initialize();
@@ -297,10 +404,11 @@ export const usePositionTracker = (
 
   // Countdown timer to show time until next send
   const updateCountdown = useCallback(() => {
-    if (lastBackgroundSendTime === 0) return;
+    const lastSentTime = lastSendTimeQuery.data || 0;
+    if (lastSentTime === 0) return;
 
     const currentTime = Date.now();
-    const timeSinceLastSend = currentTime - lastBackgroundSendTime;
+    const timeSinceLastSend = currentTime - lastSentTime;
     const timeRemaining = Math.max(
       0,
       backgroundSendInterval - timeSinceLastSend
@@ -312,7 +420,7 @@ export const usePositionTracker = (
       // Time's up, try to send position
       sendPositionRobust();
     }
-  }, [isTracking]);
+  }, [isTracking, lastSendTimeQuery.data]);
 
   // Start countdown timer
   useEffect(() => {
@@ -333,20 +441,6 @@ export const usePositionTracker = (
     };
   }, [isTracking, updateCountdown]);
 
-  // Mutation for sending position to API
-  const sendPositionMutation = useMutation({
-    mutationFn: sendPositionToAPI,
-    onSuccess: async (data) => {
-      const currentTime = Date.now();
-      await saveToStorage(currentTime);
-      setLastSentAt(new Date(currentTime));
-      console.log("✅ Position sent successfully");
-    },
-    onError: (error: Error) => {
-      console.error("❌ Failed to send position:", error.message);
-    },
-  });
-
   // Setup background tasks
   const setupBackgroundTasks = useCallback(async () => {
     try {
@@ -355,7 +449,7 @@ export const usePositionTracker = (
 
       // Check background task status
       const status = await BackgroundTask.getStatusAsync();
-      setBackgroundTaskStatus(status);
+      queryClient.setQueryData(QUERY_KEYS.BACKGROUND_TASK_STATUS, status);
 
       if (status === BackgroundTask.BackgroundTaskStatus.Restricted) {
         console.warn("⚠️ Background tasks are restricted on this device");
@@ -410,7 +504,7 @@ export const usePositionTracker = (
       console.error("❌ Failed to setup background tasks:", error);
       return false;
     }
-  }, [interval]);
+  }, [interval, queryClient]);
 
   // Cleanup background tasks
   const cleanupBackgroundTasks = useCallback(async () => {
@@ -433,11 +527,14 @@ export const usePositionTracker = (
       }
 
       setBackgroundTaskRegistered(false);
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.BACKGROUND_TASK_STATUS,
+      });
       console.log("✅ Background tasks cleaned up");
     } catch (error) {
       console.error("❌ Failed to cleanup background tasks:", error);
     }
-  }, []);
+  }, [queryClient]);
 
   // Get current location with timeout
   const getLocationWithTimeout = useCallback(
@@ -467,7 +564,8 @@ export const usePositionTracker = (
   const sendPositionRobust = useCallback(async (): Promise<boolean> => {
     // Check if enough time has passed since last send
     const currentTime = Date.now();
-    const timeSinceLastSend = currentTime - lastBackgroundSendTime;
+    const lastSentTime = lastSendTimeQuery.data || 0;
+    const timeSinceLastSend = currentTime - lastSentTime;
 
     if (timeSinceLastSend < backgroundSendInterval) {
       console.log(
@@ -501,7 +599,7 @@ export const usePositionTracker = (
       console.error("❌ Failed to send position:", error);
       return false;
     }
-  }, [getLocationWithTimeout, sendPositionMutation]);
+  }, [getLocationWithTimeout, sendPositionMutation, lastSendTimeQuery.data]);
 
   // Send current position (for external use)
   const sendCurrentPosition = useCallback(async (): Promise<void> => {
@@ -551,25 +649,25 @@ export const usePositionTracker = (
           // App came to foreground
           console.log("📱 App came to foreground");
 
-          // Reinitialize from storage
-          await initializeFromStorage();
-
-          // Update last sent display
-          if (lastBackgroundSendTime > 0) {
-            setLastSentAt(new Date(lastBackgroundSendTime));
-          }
+          // Refetch all queries
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.LAST_SEND_TIME,
+          });
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.BACKGROUND_TASK_STATUS,
+          });
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.TRACKING_STATE,
+          });
 
           // Update countdown immediately
           updateCountdown();
 
-          // Check background task status
-          const status = await BackgroundTask.getStatusAsync();
-          setBackgroundTaskStatus(status);
-
           if (isTracking) {
             // Check if it's time to send
             const currentTime = Date.now();
-            const timeSinceLastSend = currentTime - lastBackgroundSendTime;
+            const lastSentTime = lastSendTimeQuery.data || 0;
+            const timeSinceLastSend = currentTime - lastSentTime;
 
             if (timeSinceLastSend >= backgroundSendInterval) {
               console.log("⏰ Time to send position after foreground");
@@ -583,12 +681,25 @@ export const usePositionTracker = (
 
       appStateRef.current = nextAppState;
     },
-    [isTracking, sendPositionRobust, updateCountdown]
+    [
+      isTracking,
+      sendPositionRobust,
+      updateCountdown,
+      queryClient,
+      lastSendTimeQuery.data,
+    ]
   );
 
   // Start tracking
   const startTracking = useCallback(async () => {
     if (isTracking) {
+      console.log("⚠️ Already tracking, skipping start");
+      return;
+    }
+
+    // Prevent multiple simultaneous starts
+    if (updateTrackingStateMutation.isPending) {
+      console.log("⚠️ Start tracking already in progress, skipping");
       return;
     }
 
@@ -601,34 +712,37 @@ export const usePositionTracker = (
       // Setup background tasks
       const backgroundSetup = await setupBackgroundTasks();
 
-      setIsTracking(true);
+      // Update tracking state
+      await updateTrackingStateMutation.mutateAsync(true);
 
       // Check if we should send immediately or wait
       const currentTime = Date.now();
-      const timeSinceLastSend = currentTime - lastBackgroundSendTime;
+      const lastSentTime = lastSendTimeQuery.data || 0;
+      const timeSinceLastSend = currentTime - lastSentTime;
 
-      if (
-        lastBackgroundSendTime === 0 ||
-        timeSinceLastSend >= backgroundSendInterval
-      ) {
-        // Send initial position
-        const initialSuccess = await sendPositionRobust();
-        console.log(
-          initialSuccess
-            ? "✅ Initial position sent"
-            : "❌ Failed to send initial position"
-        );
+      if (lastSentTime === 0 || timeSinceLastSend >= backgroundSendInterval) {
+        // Send initial position with delay to prevent conflicts
+        setTimeout(async () => {
+          if (!sendPositionMutation.isPending) {
+            const initialSuccess = await sendPositionRobust();
+            console.log(
+              initialSuccess
+                ? "✅ Initial position sent"
+                : "❌ Failed to send initial position"
+            );
+          }
+        }, 2000);
       } else {
         console.log(
           `⏳ Waiting ${Math.round((backgroundSendInterval - timeSinceLastSend) / 1000)}s for next send`
         );
       }
 
-      // Set up foreground interval as backup
+      // Set up foreground interval as backup with longer interval to prevent spam
       intervalRef.current = setInterval(
         intervalSendPosition,
-        Math.min(interval, 60000)
-      ); // Check every minute at most
+        Math.max(interval, 300000) // Minimum 5 minutes to prevent spam
+      );
       console.log("✅ Foreground tracking started");
 
       if (!backgroundSetup) {
@@ -638,7 +752,7 @@ export const usePositionTracker = (
       }
     } catch (error) {
       console.error("❌ Failed to start tracking:", error);
-      setIsTracking(false);
+      await updateTrackingStateMutation.mutateAsync(false);
     }
   }, [
     isTracking,
@@ -647,6 +761,9 @@ export const usePositionTracker = (
     sendPositionRobust,
     intervalSendPosition,
     setupBackgroundTasks,
+    updateTrackingStateMutation,
+    lastSendTimeQuery.data,
+    sendPositionMutation.isPending,
   ]);
 
   // Stop tracking
@@ -656,7 +773,9 @@ export const usePositionTracker = (
     }
 
     console.log("🛑 Stopping position tracking");
-    setIsTracking(false);
+
+    // Update tracking state
+    await updateTrackingStateMutation.mutateAsync(false);
 
     // Stop foreground tracking
     stopWatchingLocation();
@@ -676,7 +795,12 @@ export const usePositionTracker = (
     await cleanupBackgroundTasks();
 
     console.log("✅ Position tracking stopped");
-  }, [isTracking, stopWatchingLocation, cleanupBackgroundTasks]);
+  }, [
+    isTracking,
+    stopWatchingLocation,
+    cleanupBackgroundTasks,
+    updateTrackingStateMutation,
+  ]);
 
   // Setup app state listener
   useEffect(() => {
@@ -714,6 +838,16 @@ export const usePositionTracker = (
     };
   }, []);
 
+  // Sync tracking state from query
+  useEffect(() => {
+    if (
+      trackingStateQuery.data !== undefined &&
+      trackingStateQuery.data !== isTracking
+    ) {
+      setIsTracking(trackingStateQuery.data);
+    }
+  }, [trackingStateQuery.data, isTracking]);
+
   return {
     isTracking,
     location,
@@ -721,10 +855,13 @@ export const usePositionTracker = (
     locationError,
     isMocked,
     backgroundTaskRegistered,
-    backgroundTaskStatus,
+    backgroundTaskStatus: backgroundTaskStatusQuery.data || null,
+    trackingState: trackingStateQuery,
     isSendingPosition: sendPositionMutation.isPending,
     sendPositionError: sendPositionMutation.error?.message || null,
-    lastSentAt,
+    lastSentAt: lastSendTimeQuery.data
+      ? new Date(lastSendTimeQuery.data)
+      : null,
     timeUntilNextSend,
     startTracking,
     stopTracking,
