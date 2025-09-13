@@ -137,14 +137,9 @@ export default {
                     locationWhenInUsePermission:
                         "Allow Tracking Truck to use your location to track delivery routes.",
                     isIosBackgroundLocationEnabled: true,
+                    isAndroidForegroundServiceEnabled: true,
                     isAndroidBackgroundLocationEnabled: true,
                 },
-            ],
-            [
-                "expo-background-fetch",
-                {
-                    backgroundFetchRequiredDelay: 900 // 15 minutes in seconds
-                }
             ],
             "expo-task-manager",
             "expo-router",

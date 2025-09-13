@@ -1,9 +1,10 @@
 import DeliveryCard from "@/components/DeliveryCard";
 import { useDeliveryByWorker } from "@/hooks/useDelivery";
+import { useLocation } from "@/hooks/useLocation";
+import { usePositionDrivers } from "@/hooks/usePositionDrivers";
 import { usePositionTracker } from "@/hooks/usePositionTracker";
 import { useProfile } from "@/hooks/useProfile";
 import { Ionicons } from "@expo/vector-icons";
-import * as BackgroundTask from "expo-background-task";
 import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import {
@@ -26,6 +27,7 @@ const DashboardDriver = () => {
   const { data: user } = useProfile();
   const worker_id = user?.data.id || "";
 
+
   const {
     data: deliveriesData,
     isLoading,
@@ -36,7 +38,7 @@ const DashboardDriver = () => {
 
   const deliveries = deliveriesData?.data || null;
 
-  // Position tracking with background support - MENGGUNAKAN RETURN VALUES YANG BARU
+  // Position tracking with corrected hook usage
   const {
     isTracking,
     location,
@@ -47,19 +49,18 @@ const DashboardDriver = () => {
     lastSentAt,
     isMocked,
     backgroundTaskRegistered,
-    timeUntilNextSend, // ✅ MENGGUNAKAN COUNTDOWN DARI HOOK
-    backgroundTaskStatus, // ✅ TAMBAHAN BARU
+    timeUntilNextSend,
     startTracking,
     stopTracking,
-    triggerBackgroundTaskForTesting, // ✅ UNTUK TESTING
+    sendCurrentPosition,
   } = usePositionTracker({
     autoTrack: !!deliveries?.id,
-    interval: 30000, // 15 minutes
+    interval: 60000, // 1 minute - more reasonable interval
   });
 
   const router = useRouter();
 
-  // ✅ HAPUS COUNTDOWN MANUAL - SUDAH ADA DI HOOK
+  // Format countdown display
   const nextUpdateCountdown =
     timeUntilNextSend > 0
       ? `${Math.floor(timeUntilNextSend / 60)}m ${timeUntilNextSend % 60}s`
@@ -67,7 +68,7 @@ const DashboardDriver = () => {
         ? "Sending soon..."
         : "";
 
-  // ✅ Enhanced error handling with user feedback for critical issues
+  // Enhanced error handling with user feedback for critical issues
   useEffect(() => {
     if (locationError) {
       console.error("Location error detected:", locationError);
@@ -94,7 +95,7 @@ const DashboardDriver = () => {
     }
   }, [locationError]);
 
-  // ✅ Handle critical position send errors
+  // Handle critical position send errors
   useEffect(() => {
     if (sendPositionError) {
       console.error("Position send error:", sendPositionError);
@@ -102,38 +103,30 @@ const DashboardDriver = () => {
     }
   }, [sendPositionError]);
 
-  // ✅ Enhanced fake GPS detection
+  // Enhanced fake GPS detection
   useEffect(() => {
     if (isMocked) {
       Alert.alert(
-        "🚨 Fake GPS Terdeteksi",
+        "Fake GPS Terdeteksi",
         "Lokasi kamu terdeteksi menggunakan aplikasi Fake GPS. Matikan aplikasi tersebut untuk melanjutkan tracking pengiriman.",
         [{ text: "OK" }]
       );
     }
   }, [isMocked]);
 
-  // ✅ Monitor delivery status changes for tracking control
+  // Monitor delivery status changes for tracking control
   useEffect(() => {
     console.log(
-      `📦 Delivery status changed. Active: ${!!deliveries?.id}, Tracking: ${isTracking}`
+      `Delivery status changed. Active: ${!!deliveries?.id}, Tracking: ${isTracking}`
     );
-    console.log(`🔄 Background task status: ${backgroundTaskStatus}`);
 
     // Log background task status
     if (backgroundTaskRegistered) {
-      console.log("✅ Background tracking registered and active");
+      console.log("Background tracking registered and active");
     } else if (isTracking) {
-      console.log(
-        "⚠️ Foreground tracking only - background may not be available"
-      );
+      console.log("Foreground tracking only - background may not be available");
     }
-  }, [
-    deliveries?.id,
-    isTracking,
-    backgroundTaskRegistered,
-    backgroundTaskStatus,
-  ]);
+  }, [deliveries?.id, isTracking, backgroundTaskRegistered]);
 
   const handleRefresh = () => {
     refetch();
@@ -143,7 +136,7 @@ const DashboardDriver = () => {
     router.push(`/delivery/${deliveryId}`);
   };
 
-  // ✅ Manual tracking controls (for debugging or manual override)
+  // Manual tracking controls (for debugging or manual override)
   const handleManualTrackingToggle = () => {
     if (isTracking) {
       Alert.alert(
@@ -159,13 +152,13 @@ const DashboardDriver = () => {
     }
   };
 
-  // ✅ TESTING FUNCTION - DEVELOPMENT ONLY
-  const handleTestBackgroundTask = async () => {
+  // Manual send for testing
+  const handleManualSend = async () => {
     try {
-      await triggerBackgroundTaskForTesting();
-      Alert.alert("Test", "Background task dipicu untuk testing");
+      await sendCurrentPosition();
+      Alert.alert("Berhasil", "Posisi berhasil dikirim");
     } catch (error) {
-      Alert.alert("Error", "Gagal menjalankan test background task");
+      Alert.alert("Error", "Gagal mengirim posisi");
     }
   };
 
@@ -205,6 +198,7 @@ const DashboardDriver = () => {
     );
   }
 
+
   return (
     <View style={{ marginBottom: insets.bottom }} className="flex-1 bg-gray-50">
       <StatusBar barStyle="light-content" backgroundColor="#1E40AF" />
@@ -229,13 +223,13 @@ const DashboardDriver = () => {
             </Text>
           </View>
 
-          {/* ✅ Enhanced Fake GPS Warning Banner */}
+          {/* Enhanced Fake GPS Warning Banner */}
           {isMocked && (
             <View className="bg-red-100 border border-red-400 rounded-xl p-3 mb-4">
               <View className="flex-row items-center mb-2">
                 <Ionicons name="alert-circle" size={20} color="#DC2626" />
                 <Text className="text-red-700 font-bold ml-2">
-                  Fake GPS Terdeteksi! 🚨
+                  Fake GPS Terdeteksi!
                 </Text>
               </View>
               <Text className="text-red-600 text-sm ml-6">
@@ -245,24 +239,7 @@ const DashboardDriver = () => {
             </View>
           )}
 
-          {/* ✅ BACKGROUND TASK STATUS WARNING */}
-          {backgroundTaskStatus ===
-            BackgroundTask.BackgroundTaskStatus.Restricted && (
-            <View className="bg-orange-100 border border-orange-400 rounded-xl p-3 mb-4">
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="warning-outline" size={20} color="#F59E0B" />
-                <Text className="text-orange-700 font-bold ml-2">
-                  Background Task Terbatas
-                </Text>
-              </View>
-              <Text className="text-orange-600 text-sm ml-6">
-                Sistem membatasi background task. Tracking mungkin tidak
-                berjalan saat app tertutup.
-              </Text>
-            </View>
-          )}
-
-          {/* ✅ Enhanced Status Overview Card */}
+          {/* Enhanced Status Overview Card */}
           <View className="bg-white rounded-2xl p-4 shadow-sm">
             <View className="flex-row items-center justify-between mb-3">
               <View className="flex-row items-center">
@@ -281,7 +258,7 @@ const DashboardDriver = () => {
             </View>
 
             <View className="space-y-2">
-              {/* ✅ Enhanced Tracking Status */}
+              {/* Enhanced Tracking Status */}
               <View className="flex-row items-center">
                 <View
                   className={`w-2 h-2 rounded-full mr-3 ${
@@ -316,40 +293,23 @@ const DashboardDriver = () => {
                 </Text>
               </View>
 
-              {/* ✅ Background Status Indicator */}
+              {/* Background Status Indicator */}
               {isTracking && (
                 <View className="flex-row items-center">
                   <View
                     className={`w-2 h-2 rounded-full mr-3 ${
-                      backgroundTaskRegistered &&
-                      backgroundTaskStatus ===
-                        BackgroundTask.BackgroundTaskStatus.Available
-                        ? "bg-blue-500"
-                        : backgroundTaskStatus ===
-                            BackgroundTask.BackgroundTaskStatus.Restricted
-                          ? "bg-red-500"
-                          : "bg-orange-500"
+                      backgroundTaskRegistered ? "bg-blue-500" : "bg-orange-500"
                     }`}
                   />
                   <Text
                     className={`text-xs ${
-                      backgroundTaskRegistered &&
-                      backgroundTaskStatus ===
-                        BackgroundTask.BackgroundTaskStatus.Available
+                      backgroundTaskRegistered
                         ? "text-blue-600"
-                        : backgroundTaskStatus ===
-                            BackgroundTask.BackgroundTaskStatus.Restricted
-                          ? "text-red-600"
-                          : "text-orange-600"
+                        : "text-orange-600"
                     }`}>
-                    {backgroundTaskRegistered &&
-                    backgroundTaskStatus ===
-                      BackgroundTask.BackgroundTaskStatus.Available
+                    {backgroundTaskRegistered
                       ? "Background tracking aktif"
-                      : backgroundTaskStatus ===
-                          BackgroundTask.BackgroundTaskStatus.Restricted
-                        ? "Background tracking dibatasi sistem"
-                        : "Foreground only - terbatas saat app tertutup"}
+                      : "Foreground only - terbatas saat app tertutup"}
                   </Text>
                 </View>
               )}
@@ -366,9 +326,8 @@ const DashboardDriver = () => {
                   <Text
                     className="text-sm text-gray-600 ml-2 flex-1"
                     numberOfLines={2}>
-                    {location.city
-                      ? location.address
-                      : `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}
+                    {location.city}, {location.address}
+                    {location.accuracy && ` (±${Math.round(location.accuracy)}m)`}
                   </Text>
                 </View>
               )}
@@ -383,7 +342,7 @@ const DashboardDriver = () => {
                 </View>
               )}
 
-              {/* ✅ COUNTDOWN DARI HOOK */}
+              {/* Countdown from Hook */}
               {nextUpdateCountdown && isTracking && !isMocked && (
                 <View className="flex-row items-center">
                   <Ionicons name="timer-outline" size={14} color="#2563EB" />
@@ -393,7 +352,7 @@ const DashboardDriver = () => {
                 </View>
               )}
 
-              {/* ✅ Enhanced Error Indicators */}
+              {/* Enhanced Error Indicators */}
               {!isTracking &&
                 !isLoadingLocation &&
                 deliveries?.id &&
@@ -429,24 +388,33 @@ const DashboardDriver = () => {
               )}
             </View>
 
-            {/* ✅ Control buttons */}
+            {/* Control buttons */}
             {deliveries && (
-              <View className="mt-3 space-y-2">
+              <View className="mt-3 flex-row space-x-2">
                 <TouchableOpacity
                   onPress={handleManualTrackingToggle}
-                  className="p-2 bg-gray-100 rounded-lg">
+                  className="flex-1 p-2 bg-gray-100 rounded-lg">
                   <Text className="text-xs text-gray-600 text-center">
                     {isTracking ? "Stop" : "Start"} Tracking
                   </Text>
                 </TouchableOpacity>
 
-                {/* ✅ TESTING BUTTON - DEVELOPMENT ONLY */}
-                {__DEV__ && isTracking && (
+                {/* Manual send button for testing */}
+                {isTracking && !isMocked && (
                   <TouchableOpacity
-                    onPress={handleTestBackgroundTask}
-                    className="p-2 bg-blue-100 rounded-lg">
-                    <Text className="text-xs text-blue-600 text-center">
-                      🧪 Test Background Task
+                    onPress={handleManualSend}
+                    disabled={isSendingPosition}
+                    className={`flex-1 p-2 rounded-lg ${
+                      isSendingPosition
+                        ? "bg-gray-200"
+                        : "bg-blue-100"
+                    }`}>
+                    <Text className={`text-xs text-center ${
+                      isSendingPosition
+                        ? "text-gray-500"
+                        : "text-blue-600"
+                    }`}>
+                      {isSendingPosition ? "Sending..." : "Send Now"}
                     </Text>
                   </TouchableOpacity>
                 )}
